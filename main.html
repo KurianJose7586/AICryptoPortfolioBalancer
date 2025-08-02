@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Crypto Portfolio Rebalancer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            max-width: 300px;
+            margin: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-600">
+                AI Crypto Portfolio Rebalancer
+            </h1>
+            <p class="text-gray-400 mt-2">Let AI craft your investment strategy and rebalance your portfolio.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Input Section -->
+            <div class="space-y-6">
+                <div class="glassmorphism rounded-xl p-6">
+                    <label for="portfolio-input" class="block text-lg font-semibold mb-2">Your Current Portfolio</label>
+                    <textarea id="portfolio-input" rows="5" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-gray-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g., 1.5 BTC, 10 ETH, 5000 ADA, 10000 USDC"></textarea>
+                </div>
+
+                <div class="glassmorphism rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="intent-input" class="block text-lg font-semibold">Your Investment Intent</label>
+                    </div>
+                     <div class="flex flex-col sm:flex-row gap-2 mb-3">
+                        <select id="strategy-selector" class="w-full sm:w-2/3 bg-gray-800 border border-gray-700 rounded-lg p-3 text-gray-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="Aggressive Growth">Aggressive Growth</option>
+                            <option value="Balanced">Balanced</option>
+                            <option value="Conservative">Conservative</option>
+                             <option value="DeFi Focus">DeFi Focus</option>
+                            <option value="AI & Big Data Focus">AI & Big Data Focus</option>
+                        </select>
+                        <button id="generate-intent-btn" class="w-full sm:w-1/3 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
+                           ✨ Generate Intent
+                        </button>
+                    </div>
+                    <textarea id="intent-input" rows="3" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-gray-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Select a strategy and click 'Generate Intent', or write your own."></textarea>
+                </div>
+
+                <button id="rebalance-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
+                     <span id="rebalance-icon">✨</span>
+                    <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span id="button-text" class="ml-2">Analyze & Rebalance</span>
+                </button>
+            </div>
+
+            <!-- Output Section -->
+            <div id="output-section" class="space-y-6 hidden">
+                 <div class="glassmorphism rounded-xl p-6">
+                    <h2 class="text-2xl font-bold mb-4 text-center">✨ AI Portfolio Analysis</h2>
+                    <div id="ai-analysis" class="text-gray-300 space-y-4"></div>
+                </div>
+                
+                <div class="glassmorphism rounded-xl p-6">
+                    <h2 class="text-2xl font-bold mb-4 text-center">Proposed Rebalancing Plan</h2>
+                    <div id="rebalancing-plan" class="space-y-3"></div>
+                </div>
+
+                <div class="glassmorphism rounded-xl p-6">
+                    <h2 class="text-2xl font-bold mb-4 text-center">Portfolio Visualization</h2>
+                    <div class="flex flex-col md:flex-row justify-around items-center gap-8">
+                        <div class="text-center w-full">
+                            <h3 class="font-semibold mb-2">Before</h3>
+                            <div class="chart-container"><canvas id="before-chart"></canvas></div>
+                        </div>
+                        <div class="text-center w-full">
+                            <h3 class="font-semibold mb-2">After</h3>
+                            <div class="chart-container"><canvas id="after-chart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glassmorphism rounded-xl p-6">
+                    <h2 class="text-2xl font-bold mb-4 text-center">✨ AI Simulated On-Chain Execution</h2>
+                    <p class="text-gray-400 text-sm text-center mb-4">AI-generated explanations of the simulated trades.</p>
+                    <div id="onchain-simulation" class="space-y-3"></div>
+                </div>
+            </div>
+        </main>
+        
+        <div id="message-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50">
+            <div class="glassmorphism rounded-lg p-8 max-w-sm text-center mx-4">
+                <p id="modal-message-text" class="text-lg"></p>
+                <button onclick="document.getElementById('message-modal').classList.add('hidden')" class="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg">
+                    Close
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // DOM Elements
+        const rebalanceBtn = document.getElementById('rebalance-btn');
+        const generateIntentBtn = document.getElementById('generate-intent-btn');
+        const portfolioInput = document.getElementById('portfolio-input');
+        const intentInput = document.getElementById('intent-input');
+        const strategySelector = document.getElementById('strategy-selector');
+        const outputSection = document.getElementById('output-section');
+        const aiAnalysis = document.getElementById('ai-analysis');
+        const rebalancingPlan = document.getElementById('rebalancing-plan');
+        const onchainSimulation = document.getElementById('onchain-simulation');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const buttonText = document.getElementById('button-text');
+        const modal = document.getElementById('message-modal');
+        const modalMessage = document.getElementById('modal-message-text');
+
+        let beforeChart, afterChart;
+
+        // Mock data for cryptocurrency prices (in USD)
+        const mockCryptoPrices = {
+            'BTC': 68000, 'ETH': 3500, 'SOL': 150, 'ADA': 0.45, 'AVAX': 35,
+            'DOT': 7, 'LINK': 18, 'MATIC': 0.7, 'XRP': 0.5, 'DOGE': 0.15,
+            'USDC': 1, 'USDT': 1, 'DAI': 1, 'RNDR': 10, 'TAO': 400, 'FET': 2.2,
+            'AAVE': 90, 'UNI': 10, 'LDO': 2.3
+        };
+
+        // --- Gemini API Call Helper ---
+        async function callGemini(prompt, schema) {
+            const apiKey = ""; // Injected by environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API call failed with status: ${response.status}`);
+            }
+            const result = await response.json();
+             if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                return JSON.parse(result.candidates[0].content.parts[0].text);
+            } else {
+                console.error("Unexpected API response structure:", result);
+                throw new Error("The AI returned an unexpected response.");
+            }
+        }
+
+        // --- Feature 1: Generate Investment Intent ---
+        generateIntentBtn.addEventListener('click', async () => {
+            const strategy = strategySelector.value;
+            generateIntentBtn.disabled = true;
+            generateIntentBtn.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+            
+            try {
+                const prompt = `Generate a concise, 2-3 sentence investment intent for a crypto portfolio with a strategy of "${strategy}". The tone should be clear and direct.`;
+                const schema = { type: "OBJECT", properties: { intent: { type: "STRING" } } };
+                const result = await callGemini(prompt, schema);
+                intentInput.value = result.intent;
+            } catch (error) {
+                showModal(`Failed to generate intent: ${error.message}`);
+            } finally {
+                generateIntentBtn.disabled = false;
+                generateIntentBtn.innerHTML = '✨ Generate Intent';
+            }
+        });
+
+        // --- Feature 2: Main Rebalancing Logic ---
+        rebalanceBtn.addEventListener('click', async () => {
+            const portfolioText = portfolioInput.value.trim();
+            const intentText = intentInput.value.trim();
+
+            if (!portfolioText || !intentText) {
+                showModal("Please provide your portfolio and generate or write an investment intent.");
+                return;
+            }
+            
+            toggleLoading(true);
+
+            try {
+                const prompt = createRebalancingPrompt(portfolioText, intentText);
+                const schema = getRebalancingSchema();
+                const aiResponse = await callGemini(prompt, schema);
+                await displayResults(aiResponse, portfolioText);
+            } catch (error) {
+                console.error("Error during rebalancing:", error);
+                showModal(`An error occurred: ${error.message}.`);
+            } finally {
+                toggleLoading(false);
+            }
+        });
+
+        function toggleLoading(isLoading) {
+            loadingSpinner.classList.toggle('hidden', !isLoading);
+            document.getElementById('rebalance-icon').classList.toggle('hidden', isLoading);
+            buttonText.textContent = isLoading ? "Analyzing..." : "Analyze & Rebalance";
+            rebalanceBtn.disabled = isLoading;
+        }
+        
+        function showModal(message) {
+            modalMessage.textContent = message;
+            modal.classList.remove('hidden');
+        }
+
+        function createRebalancingPrompt(portfolio, intent) {
+            const pricesString = JSON.stringify(mockCryptoPrices);
+            return `
+                You are an expert crypto portfolio analyst. Your task is to analyze a user's portfolio, compare it to their intent, and generate a detailed rebalancing plan.
+
+                **Context:**
+                - User's Portfolio: ${portfolio}
+                - User's Intent: ${intent}
+                - Current Market Prices (USD): ${pricesString}
+
+                **Instructions:**
+                1.  **Analysis:** Provide a detailed analysis covering:
+                    -   A one-sentence summary of the current portfolio.
+                    -   The portfolio's risk level (e.g., High, Medium, Low) with a brief justification.
+                    -   A summary of the proposed changes and how they align with the user's intent.
+                2.  **Plan:** Create a rebalancing plan. The percentages in the plan must represent the *target* allocation of the *total portfolio value* after rebalancing. The sum of all target percentages must equal 100.
+                3.  Only use assets from the provided market prices list.
+
+                Your response MUST be a valid JSON object following the specified schema.
+            `;
+        }
+
+        function getRebalancingSchema() {
+            return {
+                type: "OBJECT",
+                properties: {
+                    analysis: {
+                        type: "OBJECT",
+                        properties: {
+                            summary: { type: "STRING", description: "One-sentence summary of the current portfolio." },
+                            risk: { type: "STRING", description: "Risk level (e.g., High, Medium, Low) with justification." },
+                            rationale: { type: "STRING", description: "How the proposed changes align with the user's intent." }
+                        },
+                        required: ["summary", "risk", "rationale"]
+                    },
+                    plan: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                action: { type: "STRING", enum: ["BUY", "SELL", "HOLD"] },
+                                asset: { type: "STRING" },
+                                percentage: { type: "NUMBER" }
+                            },
+                            required: ["action", "asset", "percentage"]
+                        }
+                    }
+                },
+                required: ["analysis", "plan"]
+            };
+        }
+
+        function parsePortfolio(portfolioText) {
+            const holdings = {};
+            const entries = portfolioText.split(',').map(s => s.trim());
+            entries.forEach(entry => {
+                const parts = entry.split(' ');
+                if (parts.length === 2) {
+                    const amount = parseFloat(parts[0]);
+                    const asset = parts[1].toUpperCase();
+                    if (!isNaN(amount) && mockCryptoPrices[asset] !== undefined) {
+                        holdings[asset] = (holdings[asset] || 0) + amount;
+                    }
+                }
+            });
+            return holdings;
+        }
+        
+        function calculatePortfolioValue(holdings) {
+            let totalValue = 0;
+            const portfolioWithValue = {};
+            for (const asset in holdings) {
+                const value = holdings[asset] * (mockCryptoPrices[asset] || 0);
+                portfolioWithValue[asset] = { amount: holdings[asset], value: value };
+                totalValue += value;
+            }
+            return { portfolioWithValue, totalValue };
+        }
+
+        async function displayResults(aiResponse, portfolioText) {
+            const { analysis, plan } = aiResponse;
+            const originalHoldings = parsePortfolio(portfolioText);
+            const { portfolioWithValue: beforePortfolio, totalValue } = calculatePortfolioValue(originalHoldings);
+
+            // Display enhanced AI analysis
+            aiAnalysis.innerHTML = `
+                <p><strong>Summary:</strong> ${analysis.summary}</p>
+                <p><strong>Risk Profile:</strong> ${analysis.risk}</p>
+                <p><strong>Rationale:</strong> ${analysis.rationale}</p>
+            `;
+
+            // Display Rebalancing Plan & Calculate After Portfolio
+            rebalancingPlan.innerHTML = '';
+            onchainSimulation.innerHTML = '';
+            
+            const afterPortfolio = {};
+            const trades = [];
+
+            plan.forEach(step => {
+                const targetValue = totalValue * (step.percentage / 100);
+                const asset = step.asset.toUpperCase();
+                afterPortfolio[asset] = { value: targetValue };
+
+                const planDiv = document.createElement('div');
+                planDiv.className = 'flex justify-between items-center bg-gray-800 p-3 rounded-lg';
+                planDiv.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="font-bold text-lg ${step.action === 'BUY' ? 'text-green-400' : step.action === 'SELL' ? 'text-red-400' : 'text-yellow-400'} w-16">${step.action}</span>
+                        <span class="font-semibold">${asset}</span>
+                    </div>
+                    <span class="text-gray-300">Target: ${step.percentage}%</span>
+                `;
+                rebalancingPlan.appendChild(planDiv);
+
+                const currentValue = beforePortfolio[asset]?.value || 0;
+                const difference = targetValue - currentValue;
+                if (Math.abs(difference) > 0.01) {
+                    trades.push({
+                        type: difference > 0 ? 'BUY' : 'SELL',
+                        asset: asset,
+                        value: Math.abs(difference)
+                    });
+                }
+            });
+            
+            // --- Feature 3: Generate On-Chain Explanations ---
+            await generateAndDisplayOnChainSteps(trades);
+
+            renderCharts(beforePortfolio, afterPortfolio);
+            outputSection.classList.remove('hidden');
+            window.scrollTo({ top: outputSection.offsetTop - 20, behavior: 'smooth' });
+        }
+
+        async function generateAndDisplayOnChainSteps(trades) {
+            onchainSimulation.innerHTML = `<div class="flex justify-center items-center p-4"><svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span class="ml-2">Generating explanations...</span></div>`;
+
+            let allExplanations = [];
+            for (const trade of trades) {
+                const prompt = `Explain the following crypto trade as a single step in a rebalancing plan, in a simple, user-friendly way. Mention the asset, the action (buy/sell), and the approximate USD value. Trade: ${trade.type} ${trade.asset} worth $${trade.value.toFixed(2)}.`;
+                const schema = { type: "OBJECT", properties: { explanation: { type: "STRING" } } };
+                try {
+                    const result = await callGemini(prompt, schema);
+                    allExplanations.push({ ...trade, explanation: result.explanation });
+                } catch (e) {
+                    allExplanations.push({ ...trade, explanation: `Could not generate explanation for ${trade.type} ${trade.asset}.` });
+                }
+            }
+
+            onchainSimulation.innerHTML = '';
+            if (allExplanations.length === 0) {
+                 onchainSimulation.innerHTML = `<div class="bg-gray-800 p-3 rounded-lg text-center">No trades needed. Your portfolio is already aligned with your intent!</div>`;
+                 return;
+            }
+
+            allExplanations.forEach((trade, index) => {
+                const stepDiv = document.createElement('div');
+                stepDiv.className = 'bg-gray-800 p-3 rounded-lg';
+                stepDiv.innerHTML = `
+                    <p class="font-semibold text-gray-300"><span class="text-indigo-400">Step ${index + 1}:</span> ${trade.type === 'BUY' ? 'Buy' : 'Sell'} ${trade.asset}</p>
+                    <p class="text-sm text-gray-400">${trade.explanation}</p>
+                `;
+                onchainSimulation.appendChild(stepDiv);
+            });
+        }
+        
+        function renderCharts(beforeData, afterData) {
+            const createChartConfig = (data) => {
+                const labels = Object.keys(data).filter(key => data[key].value > 0);
+                const values = labels.map(key => data[key].value);
+                return {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#6B7280', '#F97316', '#0EA5E9'],
+                            borderColor: '#1F2937',
+                            borderWidth: 2,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                };
+            };
+
+            if (beforeChart) beforeChart.destroy();
+            const beforeCtx = document.getElementById('before-chart').getContext('2d');
+            beforeChart = new Chart(beforeCtx, createChartConfig(beforeData));
+
+            if (afterChart) afterChart.destroy();
+            const afterCtx = document.getElementById('after-chart').getContext('2d');
+            afterChart = new Chart(afterCtx, createChartConfig(afterData));
+        }
+
+    </script>
+</body>
+</html>
