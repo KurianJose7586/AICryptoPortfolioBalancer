@@ -1,0 +1,4 @@
+// config.js
+window.CONFIG = {
+    geminiApiKey: "YOUR_GEMINI_API_KEY"
+};

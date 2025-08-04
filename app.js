@@ -9,8 +9,8 @@ class PortfolioBalancer {
         this.signer = null;
         this.contract = null;
         this.userAddress = null;
-        this.geminiApiKey = "AIzaSyAlsM2epefpAkd9LS9rdG72MoXbxIGg0s8";
-        
+        this.geminiApiKey = window.CONFIG?.geminiApiKey || '';
+
         this.contractABI = [
             "function createStrategy(string name, address[] targetTokens, uint256[] targetPercentages) external",
             "function executeStrategy(uint256 strategyId) external",
