@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Crypto Portfolio Balancer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 AI Crypto Portfolio Balancer</h1>
+            <p>Optimize your portfolio with Gemini AI</p>
+        </header>
+
+        <div class="wallet-section">
+            <button id="connectWallet" class="btn-primary">Connect Wallet</button>
+            <div id="walletInfo" class="wallet-info hidden">
+                <span id="walletAddress"></span>
+                <span id="walletBalance"></span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h2>Portfolio Rebalance Intent</h2>
+                <textarea 
+                    id="rebalanceIntent" 
+                    placeholder="Describe your rebalance intent (e.g., 'I want to rebalance my portfolio to be more defensive due to market volatility, focusing on stablecoins and blue-chip tokens')"
+                    rows="4"
+                ></textarea>
+                
+                <div class="ai-options">
+                    <label>
+                        <input type="checkbox" id="includeMarketAnalysis" checked>
+                        Include market analysis
+                    </label>
+                    <label>
+                        <input type="checkbox" id="includeRiskAssessment" checked>
+                        Include risk assessment
+                    </label>
+                </div>
+
+                <button id="generateStrategy" class="btn-primary">Generate AI Strategy</button>
+            </div>
+
+            <div class="strategy-section hidden" id="strategySection">
+                <h2>Generated Strategy</h2>
+                <div id="strategyDetails" class="strategy-details">
+                    <div class="loading">Generating strategy...</div>
+                </div>
+                
+                <div class="strategy-actions">
+                    <button id="executeStrategy" class="btn-success">Execute Strategy</button>
+                    <button id="modifyStrategy" class="btn-secondary">Modify Strategy</button>
+                </div>
+            </div>
+
+            <div class="portfolio-section">
+                <h2>Current Portfolio</h2>
+                <div id="portfolioDisplay" class="portfolio-display">
+                    <div class="no-data">Connect wallet to view portfolio</div>
+                </div>
+            </div>
+
+            <div class="history-section">
+                <h2>Strategy History</h2>
+                <div id="strategyHistory" class="history-display">
+                    <div class="no-data">No strategies executed yet</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="config.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.15.0/ethers.umd.min.js" integrity="sha512-UXYETj+vXKSURF1UlgVRLzWRS9ZiQTv3lcL4rbeLyqTXCPNZC6PTLF/Ik3uxm2Zo+E109cUpJPZfLxJsCgKSng==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="app.js"></script>
+</body>
+</html> 
