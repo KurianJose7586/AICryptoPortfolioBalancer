@@ -173,11 +173,42 @@ contract PortfolioManager is Ownable, ReentrancyGuard, Pausable {
         return userStrategies[user];
     }
 
+    // Add this state variable
+    address[] public supportedTokensList;
+
+    // Modify addSupportedToken
+    function addSupportedToken(address token, string memory symbol) external onlyOwner {
+        if (!supportedTokens[token]) {
+            supportedTokensList.push(token);
+        }
+        supportedTokens[token] = true;
+        tokenSymbols[token] = symbol;
+        emit TokenAdded(token, symbol);
+    }
+
+    // Fix getSupportedTokens
     function getSupportedTokens() external view returns (address[] memory, string[] memory) {
-        // This would return all supported tokens
-        // For simplicity, returning empty arrays
-        address[] memory tokens = new address[](0);
-        string[] memory symbols = new string[](0);
+        uint256 activeCount = 0;
+
+        // Count active tokens
+        for (uint256 i = 0; i < supportedTokensList.length; i++) {
+            if (supportedTokens[supportedTokensList[i]]) {
+                activeCount++;
+            }
+        }
+
+        address[] memory tokens = new address[](activeCount);
+        string[] memory symbols = new string[](activeCount);
+
+        uint256 index = 0;
+        for (uint256 i = 0; i < supportedTokensList.length; i++) {
+            if (supportedTokens[supportedTokensList[i]]) {
+                tokens[index] = supportedTokensList[i];
+                symbols[index] = tokenSymbols[supportedTokensList[i]];
+                index++;
+            }
+        }
+
         return (tokens, symbols);
     }
 

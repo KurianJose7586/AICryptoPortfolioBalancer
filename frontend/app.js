@@ -17,7 +17,11 @@ class PortfolioBalancer {
             "function getUserStrategies(address user) external view returns (tuple(string name, address[] targetTokens, uint256[] targetPercentages, uint256 timestamp, bool executed)[])",
             "function getSupportedTokens() external view returns (address[], string[])",
             "function calculatePortfolioValue(address user) external view returns (uint256)",
-            "function getTokenValue(address user, address token) external view returns (uint256)"
+            "function getTokenValue(address user, address token) external view returns (uint256)",
+            "function addSupportedToken(address token, string symbol) external",
+            "function removeSupportedToken(address token) external",
+            "function owner() external view returns (address)",
+            "function supportedTokens(address) external view returns (bool)"
         ];
         
         this.contractAddress = "0xc49d07Ae270Fb68D50A15e3a91a92c70c9aC190C";
@@ -30,6 +34,142 @@ class PortfolioBalancer {
         document.getElementById('generateStrategy').addEventListener('click', () => this.generateStrategy());
         document.getElementById('executeStrategy').addEventListener('click', () => this.executeStrategy());
         document.getElementById('modifyStrategy').addEventListener('click', () => this.modifyStrategy());
+        
+        // Add admin functions if user is owner
+        this.setupAdminFunctions();
+    }
+
+    async setupAdminFunctions() {
+        // Wait for DOM to be ready and contract to be initialized
+        setTimeout(async () => {
+            if (this.contract && this.userAddress) {
+                await this.checkIfOwner();
+            }
+        }, 1000);
+    }
+
+    async checkIfOwner() {
+        try {
+            const owner = await this.contract.owner();
+            const isOwner = owner.toLowerCase() === this.userAddress.toLowerCase();
+            
+            if (isOwner) {
+                this.showAdminPanel();
+            }
+        } catch (error) {
+            console.log('Could not check ownership:', error);
+        }
+    }
+
+    showAdminPanel() {
+        // Create admin panel if it doesn't exist
+        let adminPanel = document.getElementById('adminPanel');
+        if (!adminPanel) {
+            adminPanel = document.createElement('div');
+            adminPanel.id = 'adminPanel';
+            adminPanel.innerHTML = `
+                <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <h3 style="color: #495057; margin-bottom: 15px;">🔧 Admin Panel</h3>
+                    <div style="margin-bottom: 15px;">
+                        <button id="initializeTokens" style="background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
+                            Initialize Default Tokens
+                        </button>
+                        <button id="checkTokens" style="background: #17a2b8; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">
+                            Check Current Tokens
+                        </button>
+                    </div>
+                    <div id="adminStatus" style="padding: 10px; background: #e9ecef; border-radius: 4px; font-family: monospace; font-size: 12px;">
+                        Ready to initialize tokens...
+                    </div>
+                </div>
+            `;
+            
+            // Insert admin panel after wallet info
+            const walletInfo = document.getElementById('walletInfo');
+            walletInfo.parentNode.insertBefore(adminPanel, walletInfo.nextSibling);
+        }
+
+        // Add event listeners for admin functions
+        document.getElementById('initializeTokens').addEventListener('click', () => this.initializeDefaultTokens());
+        document.getElementById('checkTokens').addEventListener('click', () => this.checkCurrentTokens());
+    }
+
+    async initializeDefaultTokens() {
+        const statusDiv = document.getElementById('adminStatus');
+        const initButton = document.getElementById('initializeTokens');
+        
+        try {
+            initButton.disabled = true;
+            statusDiv.innerHTML = 'Initializing Sepolia testnet tokens...';
+
+            // Sepolia testnet token addresses
+            const sepoliaTokens = [
+                { address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', symbol: 'USDC', name: 'USD Coin (Sepolia)' },
+                { address: '0x7169D38820dfd117C3FA1f22a697dBA58d90BA06', symbol: 'USDT', name: 'Tether USD (Sepolia)' },
+                { address: '0x68194a729C2450ad26072b3D33ADaCbcef39D574', symbol: 'DAI', name: 'Dai Stablecoin (Sepolia)' }
+            ];
+
+            statusDiv.innerHTML += '<br><strong>Adding Sepolia testnet tokens:</strong>';
+
+            for (let i = 0; i < sepoliaTokens.length; i++) {
+                const token = sepoliaTokens[i];
+                statusDiv.innerHTML += `<br><br>Processing ${token.name}...`;
+                
+                // Check if token is already supported
+                const isSupported = await this.contract.supportedTokens(token.address);
+                if (isSupported) {
+                    statusDiv.innerHTML += `<br>✅ ${token.symbol} already supported, skipping...`;
+                    continue;
+                }
+
+                statusDiv.innerHTML += `<br>📝 Adding ${token.symbol} to contract...`;
+                const tx = await this.contract.addSupportedToken(token.address, token.symbol);
+                statusDiv.innerHTML += `<br>⏳ Transaction sent: ${tx.hash}`;
+                statusDiv.innerHTML += `<br>🔗 <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank">View on Sepolia Etherscan</a>`;
+                
+                await tx.wait();
+                statusDiv.innerHTML += `<br>✅ ${token.symbol} added successfully!`;
+            }
+
+            statusDiv.innerHTML += '<br><br>🎉 All Sepolia tokens initialized! Refreshing portfolio...';
+            
+            // Refresh portfolio display
+            this.loadPortfolio();
+            
+        } catch (error) {
+            console.error('Error initializing tokens:', error);
+            statusDiv.innerHTML += `<br><br>❌ Error: ${error.message}`;
+            if (error.message.includes('insufficient funds')) {
+                statusDiv.innerHTML += '<br>💡 Make sure you have enough Sepolia ETH for gas fees.';
+                statusDiv.innerHTML += '<br>🚰 Get Sepolia ETH from: <a href="https://sepoliafaucet.com/" target="_blank">Sepolia Faucet</a>';
+            }
+        } finally {
+            initButton.disabled = false;
+        }
+    }
+
+    async checkCurrentTokens() {
+        const statusDiv = document.getElementById('adminStatus');
+        
+        try {
+            statusDiv.innerHTML = 'Checking current supported tokens...';
+            
+            const [tokenAddresses, tokenSymbols] = await this.contract.getSupportedTokens();
+            
+            if (tokenAddresses.length === 0) {
+                statusDiv.innerHTML = 'No tokens currently supported in contract.';
+            } else {
+                let tokenList = '<br><strong>Supported Tokens:</strong><br>';
+                for (let i = 0; i < tokenAddresses.length; i++) {
+                    tokenList += `${tokenSymbols[i]}: ${tokenAddresses[i]}<br>`;
+                }
+                statusDiv.innerHTML = `Found ${tokenAddresses.length} supported tokens:${tokenList}`;
+            }
+            
+        } catch (error) {
+            console.error('Error checking tokens:', error);
+            statusDiv.innerHTML = `❌ Error checking tokens: ${error.message}`;
+        }
     }
 
     async connectWallet() {
@@ -45,9 +185,26 @@ class PortfolioBalancer {
             this.provider = new ethers.BrowserProvider(window.ethereum);
             this.signer = await this.provider.getSigner();
 
+            // Check network
+            const network = await this.provider.getNetwork();
+            console.log('Connected to network:', network.name, network.chainId);
+            
+            // Verify we're on Sepolia testnet
+            if (network.chainId !== 11155111n) {
+                alert(`Please switch to Sepolia testnet. Currently on: ${network.name} (${network.chainId})`);
+                return;
+            }
+
             this.contract = new ethers.Contract(this.contractAddress, this.contractABI, this.signer);
 
+            // Verify contract exists
+            await this.verifyContract();
+
             await this.updateWalletInfo();
+            
+            // Check if user is owner and show admin panel
+            await this.checkIfOwner();
+            
             this.loadPortfolio();
             this.loadStrategyHistory();
 
@@ -258,37 +415,97 @@ Only return valid JSON, no additional text.`;
         return tokenAddresses[symbol] || '0x0000000000000000000000000000000000000000';
     }
 
+    async verifyContract() {
+        try {
+            console.log('Verifying contract at:', this.contractAddress);
+            
+            // Check if contract exists
+            const code = await this.provider.getCode(this.contractAddress);
+            console.log('Contract code length:', code.length);
+            
+            if (code === '0x') {
+                throw new Error(`No contract deployed at address ${this.contractAddress}`);
+            }
+            
+            console.log('Contract exists, code found');
+            
+        } catch (error) {
+            console.error('Contract verification failed:', error);
+            throw error;
+        }
+    }
+
     async loadPortfolio() {
-        if (!this.contract) return;
+        if (!this.contract) {
+            console.log('No contract instance');
+            return;
+        }
 
         try {
-            const portfolioDisplay = document.getElementById('portfolioDisplay');
-            const [tokenAddresses, tokenSymbols] = await this.contract.getSupportedTokens();
+            console.log('Loading portfolio for:', this.userAddress);
+            console.log('Contract address:', this.contractAddress);
             
-            if (tokenAddresses.length === 0) {
-                portfolioDisplay.innerHTML = '<div class="no-data">No tokens in portfolio</div>';
-                return;
-            }
-
-            let portfolioHtml = '';
-            for (let i = 0; i < tokenAddresses.length; i++) {
-                const value = await this.contract.getTokenValue(this.userAddress, tokenAddresses[i]);
-                const formattedValue = ethers.utils.formatEther(value);
+            const portfolioDisplay = document.getElementById('portfolioDisplay');
+            
+            // Test if contract is accessible
+            console.log('Calling getSupportedTokens...');
+            
+            try {
+                const [tokenAddresses, tokenSymbols] = await this.contract.getSupportedTokens();
+                console.log('Supported tokens:', tokenAddresses, tokenSymbols);
                 
-                portfolioHtml += `
-                    <div class="token-item">
-                        <span class="token-symbol">${tokenSymbols[i]}</span>
-                        <span class="token-balance">${parseFloat(formattedValue).toFixed(4)}</span>
+                if (tokenAddresses.length === 0) {
+                    portfolioDisplay.innerHTML = `
+                        <div class="no-data">
+                            <p>No supported tokens configured in contract yet.</p>
+                            <p>If you're the contract owner, use the admin panel above to initialize tokens.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let portfolioHtml = '';
+                for (let i = 0; i < tokenAddresses.length; i++) {
+                    console.log(`Getting value for token ${tokenSymbols[i]} at ${tokenAddresses[i]}`);
+                    const value = await this.contract.getTokenValue(this.userAddress, tokenAddresses[i]);
+                    console.log(`Token value:`, value);
+                    
+                    // FIXED: Using ethers v6 syntax
+                    const formattedValue = ethers.formatEther(value);
+                    
+                    portfolioHtml += `
+                        <div class="token-item">
+                            <span class="token-symbol">${tokenSymbols[i]}</span>
+                            <span class="token-balance">${parseFloat(formattedValue).toFixed(4)}</span>
+                        </div>
+                    `;
+                }
+
+                portfolioDisplay.innerHTML = portfolioHtml;
+                
+            } catch (contractError) {
+                console.error('Contract call failed:', contractError);
+                
+                // Show mock portfolio if contract is not working
+                portfolioDisplay.innerHTML = `
+                    <div class="no-data">
+                        <p>Contract not responding. This might be because:</p>
+                        <ul style="text-align: left; margin: 10px 0;">
+                            <li>Contract not deployed on current network</li>
+                            <li>Wrong contract address</li>
+                            <li>Contract doesn't have getSupportedTokens function</li>
+                        </ul>
+                        <p><strong>Debug Info:</strong><br>
+                        Network: Check console for network details<br>
+                        Contract: ${this.contractAddress}</p>
                     </div>
                 `;
             }
 
-            portfolioDisplay.innerHTML = portfolioHtml;
-
         } catch (error) {
-            console.error('Error loading portfolio:', error);
+            console.error('Detailed error loading portfolio:', error);
             document.getElementById('portfolioDisplay').innerHTML = 
-                '<div class="error">Failed to load portfolio</div>';
+                '<div class="error">Failed to load portfolio: ' + error.message + '</div>';
         }
     }
 
@@ -343,4 +560,4 @@ if (typeof window.ethereum !== 'undefined') {
             window.portfolioBalancer.loadStrategyHistory();
         }
     });
-} 
+}
